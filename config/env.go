@@ -4,7 +4,7 @@ import "os"
 
 var env = Env{
 	Debug:        true,
-	ServerPort:   "4000",
+	ServerPort:   "5000",
 	MaxIdleConns: 50,
 	MaxOpenConns: 100,
 

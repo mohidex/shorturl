@@ -1,0 +1,44 @@
+version: '3.9'
+services:
+  app:
+    container_name: url_backend
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=shorturl
+      - DB_PASSWORD=supersecretpassword
+      - DB_NAME=url_db
+      - DB_PORT=5432
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASS=redis_pass
+    ports: 
+      - 5000:5000 
+    volumes:
+      - .:/app/
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    container_name: url_db
+    image: postgres:15.2-alpine
+    environment:
+      - POSTGRES_USER=shorturl
+      - POSTGRES_PASSWORD=supersecretpassword
+      - POSTGRES_DB=url_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    
+  redis:
+    container_name: url_redis
+    image: redis:7.0.10-alpine
+    environment:
+      - REDIS_PASSWORD=redis_pass
+    volumes:
+      - redisdata:/data
+    
+volumes:
+  pgdata:
+  redisdata:

@@ -54,7 +54,7 @@ func InitRedis() {
 		// },
 	})
 
-	if err := RedisClient.Ping(context.Background()); err != nil {
+	if err := RedisClient.Ping(context.TODO()).Err(); err != nil {
 		log.Fatal(err)
 	} else {
 		log.Println("Successfully connected to Redis")
