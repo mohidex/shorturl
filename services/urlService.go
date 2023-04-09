@@ -44,10 +44,9 @@ func RedisSetString(key, val string) error {
 
 func FindUrlFromDB(key string) (string, error) {
 	var url models.ShortUrl
-	db :=
-		database.GetDB()
+	db := database.GetDB()
 
-	if result := db.Where("short_url=?", key).Find(&url); result.Error != nil {
+	if result := db.Where("short_url=?", key).First(&url); result.Error != nil {
 		return "", result.Error
 	}
 	return url.DestUrl, nil
