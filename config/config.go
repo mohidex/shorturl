@@ -8,22 +8,13 @@ type DatabaseConfig struct {
 	Password string
 }
 
-type RedisConfig struct {
-	Addr      string
-	Password  string
-	RedisDb   int
-	SessionDb int
-	CacheDb   int
-}
-
 type Env struct {
 	Debug        bool
 	MaxIdleConns int
 	MaxOpenConns int
 	ServerPort   string
 
-	DB    DatabaseConfig
-	Redis RedisConfig
+	DB DatabaseConfig
 }
 
 func GetEnv() *Env {

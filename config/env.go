@@ -15,12 +15,4 @@ var env = Env{
 		User:     os.Getenv("DB_USER"),
 		Password: os.Getenv("DB_PASSWORD"),
 	},
-
-	Redis: RedisConfig{
-		Addr:      os.Getenv("REDIS_ADDR"),
-		Password:  os.Getenv("REDIS_PASS"),
-		RedisDb:   0,
-		SessionDb: 1,
-		CacheDb:   2,
-	},
 }

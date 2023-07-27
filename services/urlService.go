@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"log"
 	"time"
 
@@ -10,36 +9,24 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var (
-	ctx = context.Background()
-)
-
 func Search4ShortUrl(shortUrl string) (string, error) {
-	val, err := RedisGetString(shortUrl)
+
+	redisClient, err := database.GetRedisClient()
+	if err != nil {
+		log.Panic("Error getting Redis client:", err)
+	}
+
+	val, err := redisClient.Get(shortUrl)
 
 	if err == redis.Nil {
 		log.Println("Not found in Redis/Cache")
 		destUrl, err := FindUrlFromDB(shortUrl)
 		if err == nil {
-			_ = RedisSetString(shortUrl, destUrl)
+			_ = redisClient.Set(shortUrl, destUrl, 30*time.Minute)
 			return destUrl, err
 		}
 	}
 	return val, err
-}
-
-func RedisGetString(key string) (string, error) {
-	rdb := database.GetRedis()
-	val, err := rdb.Get(ctx, key).Result()
-	return val, err
-}
-
-func RedisSetString(key, val string) error {
-	rdb := database.GetRedis()
-	if err := rdb.Set(ctx, key, val, 30*time.Minute).Err(); err != nil {
-		return err
-	}
-	return nil
 }
 
 func FindUrlFromDB(key string) (string, error) {

@@ -8,7 +8,6 @@ import (
 
 func main() {
 	database.InitDB()
-	database.InitRedis()
 	AutoMigrate()
 	server.Init()
 }
