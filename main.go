@@ -7,12 +7,14 @@ import (
 )
 
 func main() {
-	database.InitDB()
 	AutoMigrate()
 	server.Init()
 }
 
 func AutoMigrate() {
-	db := database.GetDB()
-	db.AutoMigrate(&models.ShortUrl{})
+	pgClient, err := database.GetPostgresClient()
+	if err != nil {
+		panic(err)
+	}
+	pgClient.PerformMigrations(&models.ShortUrl{})
 }

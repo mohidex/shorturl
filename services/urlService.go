@@ -31,9 +31,12 @@ func Search4ShortUrl(shortUrl string) (string, error) {
 
 func FindUrlFromDB(key string) (string, error) {
 	var url models.ShortUrl
-	db := database.GetDB()
+	pgClient, err := database.GetPostgresClient()
+	if err != nil {
+		panic(err)
+	}
 
-	if result := db.Where("short_url=?", key).First(&url); result.Error != nil {
+	if result := pgClient.DB.Where("short_url=?", key).First(&url); result.Error != nil {
 		return "", result.Error
 	}
 	return url.DestUrl, nil

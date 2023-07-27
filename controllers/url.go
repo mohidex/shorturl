@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mohidex/shorturl/database"
 	"github.com/mohidex/shorturl/models"
 	"github.com/mohidex/shorturl/services"
 	"github.com/mohidex/shorturl/utils"
@@ -35,8 +36,9 @@ func (uc *UrlController) APIGenerateShortUrl(c *gin.Context) {
 		ShortUrl: shortUrl,
 		DestUrl:  input.OriginalUrl,
 	}
+	pgClient, _ := database.GetPostgresClient()
 
-	savedUrl, err := url.Save()
+	savedUrl, err := url.Save(pgClient)
 	if err != nil && errors.Is(err, gorm.ErrDuplicatedKey) {
 		c.JSON(http.StatusConflict, gin.H{
 			"error": err.Error(),

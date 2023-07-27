@@ -18,9 +18,8 @@ func (url *ShortUrl) IsEmpty() bool {
 	return reflect.DeepEqual(url, ShortUrl{})
 }
 
-func (url *ShortUrl) Save() (*ShortUrl, error) {
-	db := database.GetDB()
-	if result := db.Create(&url); result.Error != nil {
+func (url *ShortUrl) Save(pgClient *database.PostgresClient) (*ShortUrl, error) {
+	if result := pgClient.DB.Create(&url); result.Error != nil {
 		return &ShortUrl{}, result.Error
 	}
 	return url, nil
