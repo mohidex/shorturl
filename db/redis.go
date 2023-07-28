@@ -67,10 +67,24 @@ func (r *RedisDB) Set(ctx context.Context, key, value string, expiration time.Du
 
 // Get retrieves a value from Redis using the given key.
 func (r *RedisDB) GetLongURL(ctx context.Context, shortCode string) (string, error) {
-	return r.client.Get(ctx, shortCode).Result()
+	select {
+	case <-ctx.Done():
+		// If the context is done, return immediately.
+		return "", ctx.Err()
+	default:
+		// Get Full Url from redis by short urlCode
+		return r.client.Get(ctx, shortCode).Result()
+	}
 }
 
 // Set sets a shortCode-longURL pair in Redis with an expiration time.
 func (r *RedisDB) SetLongURL(ctx context.Context, shortCode, longURL string) error {
-	return r.Set(ctx, shortCode, longURL, 30*time.Minute)
+	select {
+	case <-ctx.Done():
+		// If the context is done, return immediately.
+		return ctx.Err()
+	default:
+		// Set urlCode and corresponding FullURL pair to Redis
+		return r.Set(ctx, shortCode, longURL, 30*time.Minute)
+	}
 }

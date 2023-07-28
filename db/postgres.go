@@ -57,26 +57,45 @@ func (p *PostgresDB) PerformMigrations(model interface{}) error {
 }
 
 func (p *PostgresDB) SaveShortURL(ctx context.Context, shortURL *models.ShortURL) (*models.ShortURL, error) {
-	if result := p.DB.Create(&shortURL); result.Error != nil {
-		return &models.ShortURL{}, result.Error
+	select {
+	case <-ctx.Done():
+		// If the context is done, return immediately.
+		return &models.ShortURL{}, ctx.Err()
+	default:
+		// Create URL entry into postgreSQL database
+		if result := p.DB.Create(&shortURL); result.Error != nil {
+			return &models.ShortURL{}, result.Error
+		}
+		return shortURL, nil
 	}
-	return shortURL, nil
 }
 
 func (p *PostgresDB) GetLongURL(ctx context.Context, shortCode string) (string, error) {
-	var url models.ShortURL
-	if result := p.DB.Where("short_url=?", shortCode).First(&url); result.Error != nil {
-		return "", result.Error
+	select {
+	case <-ctx.Done():
+		// If the context is done, return immediately.
+		return "", ctx.Err()
+	default:
+		//fetch the long URL from PostgreSQL databse
+		var url models.ShortURL
+		if result := p.DB.Where("short_url=?", shortCode).First(&url); result.Error != nil {
+			return "", result.Error
+		}
+		return url.DestUrl, nil
 	}
-	return url.DestUrl, nil
-
 }
 
 func (p *PostgresDB) SetLongURL(ctx context.Context, shortCode, longURL string) error {
-	shortURL := models.ShortURL{
-		ShortUrl: shortCode,
-		DestUrl:  longURL,
+	select {
+	case <-ctx.Done():
+		// If the context is done, return immediately.
+		return ctx.Err()
+	default:
+		shortURL := models.ShortURL{
+			ShortUrl: shortCode,
+			DestUrl:  longURL,
+		}
+		_, err := p.SaveShortURL(ctx, &shortURL)
+		return err
 	}
-	_, err := p.SaveShortURL(ctx, &shortURL)
-	return err
 }
