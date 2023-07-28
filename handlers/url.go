@@ -1,20 +1,23 @@
-package controllers
+package handlers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mohidex/shorturl/database"
+	"github.com/mohidex/shorturl/db"
 	"github.com/mohidex/shorturl/models"
-	"github.com/mohidex/shorturl/services"
 	"github.com/mohidex/shorturl/utils"
 	"gorm.io/gorm"
 )
 
-type UrlController struct{}
+type ShortURLHandler struct {
+	RedisDB *db.RedisDB
+	PgDB    *db.PostgresDB
+}
 
-func (uc *UrlController) APIGenerateShortUrl(c *gin.Context) {
+func (h *ShortURLHandler) APIGenerateShortUrl(c *gin.Context) {
 	var input models.UrlInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -32,13 +35,13 @@ func (uc *UrlController) APIGenerateShortUrl(c *gin.Context) {
 		return
 	}
 
-	url := models.ShortUrl{
+	url := models.ShortURL{
 		ShortUrl: shortUrl,
 		DestUrl:  input.OriginalUrl,
 	}
-	pgClient, _ := database.GetPostgresClient()
 
-	savedUrl, err := url.Save(pgClient)
+	err = h.PgDB.SetLongURL(context.Background(), url.ShortUrl, url.DestUrl)
+
 	if err != nil && errors.Is(err, gorm.ErrDuplicatedKey) {
 		c.JSON(http.StatusConflict, gin.H{
 			"error": err.Error(),
@@ -52,21 +55,30 @@ func (uc *UrlController) APIGenerateShortUrl(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"url": savedUrl,
+		"url": url,
 	})
 }
 
-func (uc *UrlController) GetShortUrl(c *gin.Context) {
-	shortUrl := c.Param("url")
+func (h *ShortURLHandler) GetShortUrl(c *gin.Context) {
+	shortCode := c.Param("url")
 
-	if utils.EmptyString(shortUrl) {
+	if utils.EmptyString(shortCode) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "The link you given is broken",
 		})
 		return
 	}
 
-	destUrl, err := services.Search4ShortUrl(shortUrl)
+	if longUrl, err := h.RedisDB.GetLongURL(context.Background(), shortCode); err == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"shortUrl": shortCode,
+			"fullUrl":  longUrl,
+		})
+		return
+	}
+
+	longUrl, err := h.PgDB.GetLongURL(context.Background(), shortCode)
+
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "URL not found",
@@ -74,8 +86,11 @@ func (uc *UrlController) GetShortUrl(c *gin.Context) {
 		return
 	}
 
+	// since url found in the database which is not in cache. So setting it in cache
+	_ = h.RedisDB.SetLongURL(context.Background(), shortCode, longUrl)
+
 	c.JSON(http.StatusOK, gin.H{
-		"shortUrl": shortUrl,
-		"fullUrl":  destUrl,
+		"shortUrl": shortCode,
+		"fullUrl":  longUrl,
 	})
 }

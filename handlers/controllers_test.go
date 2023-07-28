@@ -1,4 +1,4 @@
-package controllers
+package handlers
 
 import (
 	"net/http"
@@ -16,8 +16,8 @@ func setupRouter() *gin.Engine {
 
 func TestHealthCheckRoute(t *testing.T) {
 	router := setupRouter()
-	healthController := new(HealthController)
-	router.GET("/health", healthController.Status)
+	healthHandler := new(HealthHandler)
+	router.GET("/health", healthHandler.Status)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/health", nil)

@@ -1,20 +1,9 @@
 package main
 
 import (
-	"github.com/mohidex/shorturl/database"
-	"github.com/mohidex/shorturl/models"
-	"github.com/mohidex/shorturl/server"
+	"github.com/mohidex/shorturl/runner"
 )
 
 func main() {
-	AutoMigrate()
-	server.Init()
-}
-
-func AutoMigrate() {
-	pgClient, err := database.GetPostgresClient()
-	if err != nil {
-		panic(err)
-	}
-	pgClient.PerformMigrations(&models.ShortUrl{})
+	runner.Run()
 }
