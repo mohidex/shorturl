@@ -45,8 +45,8 @@ func Run() {
 	v1 := router.Group("v1")
 	{
 		urlHandler := &handlers.ShortURLHandler{
-			RedisDB: redisInstance,
-			PgDB:    pgInstance,
+			CacheDB:      redisInstance,
+			PersistantDB: pgInstance,
 		}
 
 		v1.POST("/generate", urlHandler.APIGenerateShortUrl)

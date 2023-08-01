@@ -13,8 +13,8 @@ import (
 )
 
 type ShortURLHandler struct {
-	RedisDB *db.RedisDB
-	PgDB    *db.PostgresDB
+	CacheDB      db.ShortURLDB
+	PersistantDB db.ShortURLPersistantDB
 }
 
 func (h *ShortURLHandler) APIGenerateShortUrl(c *gin.Context) {
@@ -47,7 +47,7 @@ func (h *ShortURLHandler) APIGenerateShortUrl(c *gin.Context) {
 	ctx := context.Background()
 
 	go func() {
-		if err := h.PgDB.SetLongURL(ctx, url.ShortUrl, url.DestUrl); err != nil {
+		if err := h.PersistantDB.SetLongURL(ctx, url.ShortUrl, url.DestUrl); err != nil {
 			log.Printf("Failed to save short URL to PostgreSQL: %s\n", err)
 			pgSaveResult <- false // Signal failure to the bool channel
 			return
@@ -59,7 +59,7 @@ func (h *ShortURLHandler) APIGenerateShortUrl(c *gin.Context) {
 	if success := <-pgSaveResult; success {
 		// PostgreSQL save operation was successful, proceed to save to Redis
 		go func() {
-			if err := h.RedisDB.SetLongURL(ctx, url.ShortUrl, url.DestUrl); err != nil {
+			if err := h.CacheDB.SetLongURL(ctx, url.ShortUrl, url.DestUrl); err != nil {
 				log.Printf("Failed to save long URL to Redis: %s\n", err)
 			}
 		}()
@@ -94,7 +94,7 @@ func (h *ShortURLHandler) GetShortUrl(c *gin.Context) {
 	// Try fetching the long URL from Redis first
 	g.Go(func() error {
 		var err error
-		longURL, err = h.RedisDB.GetLongURL(ctx, shortCode)
+		longURL, err = h.CacheDB.GetLongURL(ctx, shortCode)
 		return err
 	})
 
@@ -102,14 +102,14 @@ func (h *ShortURLHandler) GetShortUrl(c *gin.Context) {
 	if err := g.Wait(); err != nil {
 		// Redis query failed or URL not found in Redis, try fetching from postgreSQL database
 		var err error
-		longURL, err = h.PgDB.GetLongURL(context.Background(), shortCode)
+		longURL, err = h.PersistantDB.GetLongURL(context.Background(), shortCode)
 		if err != nil {
 			// If URL not found in PostgreSQL as well, return a 404
 			c.JSON(http.StatusNotFound, gin.H{"error": "Short URL not found"})
 			return
 		}
 		// since url found in the database which is not in cache. So setting it in cache
-		_ = h.RedisDB.SetLongURL(context.Background(), shortCode, longURL)
+		_ = h.CacheDB.SetLongURL(context.Background(), shortCode, longURL)
 
 	}
 
